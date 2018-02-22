@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 def main ():
-
+        pass
 def tree(args, model = 'GTRGAMMA'):
 
         '''
@@ -58,7 +58,7 @@ def tree(args, model = 'GTRGAMMA'):
                 '-T', args.threads]
         call(cmd)
 
-	d=collections.defaultdict(list)
+        d=collections.defaultdict(list)
         with open('dup_info.txt','r')  as fin:
                 for line in fin:
                         if line.startswith('IMPORTANT WARNING: Sequences'):
