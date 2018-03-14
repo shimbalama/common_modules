@@ -235,7 +235,7 @@ def tree(args, name, aln_suffix, rax = 'raxmlHPC-PTHREADS-AVX2', boots = '100', 
         cmd = ['nice',
                 rax,
                 '-s', aln_4_boot,
-                '-n', name + '_boot.tre',
+                '-n', name + '_b.tre',
                 '-m', model,
                 '-p', '12345',
                 '-b', '12345',
@@ -243,6 +243,7 @@ def tree(args, name, aln_suffix, rax = 'raxmlHPC-PTHREADS-AVX2', boots = '100', 
                 '-T', args.threads]
         print ('gg',cmd)
         call(cmd)
+        print('gg done')
         #draw bipartitions on the best ML tree
         cmd = ['nice',
                 rax,
@@ -250,11 +251,12 @@ def tree(args, name, aln_suffix, rax = 'raxmlHPC-PTHREADS-AVX2', boots = '100', 
                 '-p', '12345',
                 '-f', 'b',
                 '-t', 'RAxML_bestTree.' + name + '.tre',
-                '-z', 'RAxML_bootstrap.' + name + '_boot.tre',
-                '-n', name + '.tre',
+                '-z', 'RAxML_bootstrap.' + name + '_b.tre',
+                '-n', name + '_bi.tre',
                 '-T', args.threads]
+        print('gggg')
         call(cmd)
-
+        print('gggg done')
         d = defaultdict(list)
         if os.path.exists(name + '_dup_info.txt'):
             with open(name + '_dup_info.txt','r')  as fin:
