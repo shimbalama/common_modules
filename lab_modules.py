@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from subprocess import call, Popen, PIPE
 import os
 from collections import defaultdict
@@ -184,89 +186,105 @@ def call_blast(args, db, blast_type = 'blastn'):
         cmd += ['-perc_identity', args.percent_identity]
     call(cmd)
 
-def tree(args, name, aln, model = 'GTRGAMMA'):
+def tree(args, name, aln_suffix, rax = 'raxmlHPC-PTHREADS-AVX2', boots = 100, model = 'GTRGAMMA'):
 
-        '''
-        Makes a Raxml bipartitions tree
-	Remove identical seqs from aln before running raxml
-	Add them back to the final tree post raxml
-        '''
-        #set model. need to make this accessible one day, not hard coded...
-	#Best tree
-        cmd = ['nice',
-                'raxmlHPC-PTHREADS-AVX2',
-                '-s', name + aln,
-                '-n', name,
-                '-m', model,
-                '-p', '12345',
-                '-#', '20',
-                '-T', args.threads]
-        call(cmd)
-        cmd = ['nice',
-                'raxmlHPC-PTHREADS-AVX2',
-                '-s', name + '_trimmed.aln.reduced',
-                '-n', name + '.tre',
-                '-m', model,
-                '-p', '12345',
-                '-#', '20',
-                '-T', args.threads]
-        if os.path.exists(name + '_trimmed.aln.reduced'):
-                shutil.move('RAxML_info.' + name + '.tre', name + '_dup_info.txt')
-                for rax in glob('RAxML_*'):
-                        os.remove(rax)
-                call(cmd) #use the reduced aln so no dups
-                print ('USING REDUCED!!!!!!!!!!!!!!!!')
+    '''
+    Makes a Raxml bipartitions tree
+    Remove identical seqs from aln before running raxml
+    Add them back to the final tree post raxml
+    '''
+    #set model. need to make this accessible one day, not hard coded...
+    #Best tree
+    cmd = ['nice',
+            rax,
+            '-s', name + aln_suffix,
+            '-n', name + '.tre',
+            '-m', model,
+            '-p', '12345',
+            '-#', '20',
+            '-T', args.threads]
+    call(cmd)
+    cmd = ['nice',
+            rax,
+            '-s', name + aln_suffix + '.reduced',
+            '-n', name + '.tre',
+            '-m', model,
+            '-p', '12345',
+            '-#', '20',
+            '-T', args.threads]
+    use_reduced = False
+    if os.path.exists(name + aln_suffix + '.reduced'):
+        shutil.move('RAxML_info.' + name + '.tre', name + '_dup_info.txt')
+        for rax in glob('RAxML_*'):
+            os.remove(rax)
+        call(cmd) #use the reduced aln so no dups
+        print ('USING REDUCED!!!!!!!!!!!!!!!!')
+        use_reduced = True
+    
+    if boots > 0:
 
+        if use_reduced:
+            aln_4_boot = name + aln_suffix + '.reduced'
+        else:
+            aln_4_boot = name + aln_suffix
+        
         #boots
         cmd = ['nice',
-                'raxmlHPC-PTHREADS-AVX2',
-                '-s', name + '_trimmed.aln',
+                rax,
+                '-s', aln_4_boot,
                 '-n', name + '_boot.tre',
                 '-m', model,
                 '-p', '12345',
                 '-b', '12345',
-                '-#', '100',
+                '-#', boots,
                 '-T', args.threads]
         call(cmd)
         #draw bipartitions on the best ML tree
         cmd = ['nice',
-                'raxmlHPC-PTHREADS-AVX2',
+                rax,
                 '-m', model,
                 '-p', '12345',
                 '-f', 'b',
                 '-t', 'RAxML_bestTree.' + name + '.tre',
                 '-z', 'RAxML_bootstrap.' + name + '_boot.tre',
-                '-n', name + '_boots_on.tre',
+                '-n', name + '.tre',
                 '-T', args.threads]
         call(cmd)
 
         d = defaultdict(list)
         if os.path.exists(name + '_dup_info.txt'):
-                with open(name + '_dup_info.txt','r')  as fin:
+            with open(name + '_dup_info.txt','r')  as fin:
+                for line in fin:
+                    if line.startswith('IMPORTANT WARNING: Sequences'):
+                        in_tree, _, not_int_tree = line.strip().split()[3:6]
+                        d[in_tree].append(not_int_tree)
+            for tre_file in ['RAxML_bestTree.' + name + '.tre',
+                            'RAxML_bestTree_bipartitionsBranchLabels.' + name + '.tre',
+                            'RAxML_bestTree_bipartitions.' + name + '.tre']:
+                try:
+                    with open(tre_file, 'r') as fin:
                         for line in fin:
-                                if line.startswith('IMPORTANT WARNING: Sequences'):
-                                         in_tree, _, not_int_tree = line.strip().split()[3:6]
-                                         d[in_tree].append(not_int_tree)
-                for tre_file in ['RAxML_bestTree.' + name + '.tre',
-                                'RAxML_bestTree_bipartitionsBranchLabels.' + name + '_boots_on.tre',
-                                'RAxML_bestTree_bipartitions.' + name + '_boots_on.tre']:
-                        try:
-                                with open(tre_file, 'r') as fin:
-                                        for line in fin:
-                                                tre = line.strip()
-                                                to_join = []
-                                                for sample in d:
-                                                        to_join.append('(' + sample + ':0.0')
-                                                        for sample2 in d.get(sample):
-                                                                to_join.append(',')
-                                                                to_join.append(sample2 + ':0.0')
-                                                        new = ''.join(to_join)+')'
-                                                        tre = tre.replace(sample, new)
-                                                        to_join = []
-                                with open(tre_file + '.all.tre', 'w') as fout:
-                                        fout.write(tre)
-                        except:
-                                pass
+                            tre = line.strip()
+                            to_join = []
+                            for sample in d:
+                                to_join.append('(' + sample + ':0.0')
+                                for sample2 in d.get(sample):
+                                    to_join.append(',')
+                                    to_join.append(sample2 + ':0.0')
+                                    new = ''.join(to_join)+')'
+                                    tre = tre.replace(sample, new)
+                                    to_join = []
+                    with open(tre_file.replace('.tre', '') + '_all.tre', 'w') as fout:
+                        fout.write(tre)
+                except:
+                    pass
+        #clean up
+        if not os.path.exists('logs'):
+            os.makedirs('logs')
+        for log in glob('*.RUN.*'):
+            shutil.move(log, 'logs/'+log)
+
+
 
 if __name__ == "__main__":
         main()
