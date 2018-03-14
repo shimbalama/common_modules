@@ -1,11 +1,11 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 from subprocess import call, Popen, PIPE
 import os
 from collections import defaultdict
 from Bio import SeqIO
 from glob import glob
-
+import shutil
 
 def main():
     pass
@@ -186,7 +186,7 @@ def call_blast(args, db, blast_type = 'blastn'):
         cmd += ['-perc_identity', args.percent_identity]
     call(cmd)
 
-def tree(args, name, aln_suffix, rax = 'raxmlHPC-PTHREADS-AVX2', boots = 100, model = 'GTRGAMMA'):
+def tree(args, name, aln_suffix, rax = 'raxmlHPC-PTHREADS-AVX2', boots = '100', model = 'GTRGAMMA'):
 
     '''
     Makes a Raxml bipartitions tree
@@ -195,7 +195,8 @@ def tree(args, name, aln_suffix, rax = 'raxmlHPC-PTHREADS-AVX2', boots = 100, mo
     '''
     #set model. need to make this accessible one day, not hard coded...
     #Best tree
-    cmd = ['nice',
+    if not os.path.exists(name + aln_suffix + '.reduced'):
+        cmd = ['nice',
             rax,
             '-s', name + aln_suffix,
             '-n', name + '.tre',
@@ -203,7 +204,8 @@ def tree(args, name, aln_suffix, rax = 'raxmlHPC-PTHREADS-AVX2', boots = 100, mo
             '-p', '12345',
             '-#', '20',
             '-T', args.threads]
-    call(cmd)
+        call(cmd)
+    
     cmd = ['nice',
             rax,
             '-s', name + aln_suffix + '.reduced',
@@ -212,16 +214,17 @@ def tree(args, name, aln_suffix, rax = 'raxmlHPC-PTHREADS-AVX2', boots = 100, mo
             '-p', '12345',
             '-#', '20',
             '-T', args.threads]
+    
     use_reduced = False
     if os.path.exists(name + aln_suffix + '.reduced'):
         shutil.move('RAxML_info.' + name + '.tre', name + '_dup_info.txt')
-        for rax in glob('RAxML_*'):
-            os.remove(rax)
+        for rax_file in glob('RAxML_*'):
+            os.remove(rax_file)
         call(cmd) #use the reduced aln so no dups
         print ('USING REDUCED!!!!!!!!!!!!!!!!')
         use_reduced = True
     
-    if boots > 0:
+    if int(boots) > 0:
 
         if use_reduced:
             aln_4_boot = name + aln_suffix + '.reduced'
@@ -238,6 +241,7 @@ def tree(args, name, aln_suffix, rax = 'raxmlHPC-PTHREADS-AVX2', boots = 100, mo
                 '-b', '12345',
                 '-#', boots,
                 '-T', args.threads]
+        print ('gg',cmd)
         call(cmd)
         #draw bipartitions on the best ML tree
         cmd = ['nice',
