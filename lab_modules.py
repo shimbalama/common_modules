@@ -12,7 +12,6 @@ def main():
 
 def get_seq_type(seqs):
 
-    print ('seqs!!!!',seqs)
     #better with regex?
     amino_acids = ['A','R','N','D','C','E','Q','G','H','I','L','K','M','F','P','S','T','W','Y','V']
     nucleotides = ['A','T','C','G','N','R','Y','S','W','K','M','B','D','H','V','N']
@@ -82,41 +81,38 @@ def cat(args):
 
     return assemblies
 
-def fasta(args,  blast_folder = 'blast'):
+def fasta(tup):
 
     '''
     Makes a fasta file of all hits for each query
     '''
-    
-    print ('Cutting seqs from db for fasta ...')
-    query_seqs = get_query_seqs(args)
-    for query in query_seqs:
-        #make oonfig file from blast output
-        current = query + '_config.txt'
-        fout = open(current,'w')
-        with open('blast_out.txt', 'r') as fin:
-            for line in fin:
-                bits = line.strip().split()
-                if float(bits[2]) < (float(args.percent_identity) -1.0):
-                    continue
-                if bits[0] == query:
-                    contig = bits[1]
-                    seq_start = bits[8]
-                    seq_end = bits[9]
-                    if int(seq_start) > int(seq_end):#minus/plus is right, although seems backward    s..
-                        line = ' '.join([contig, seq_end + '-' + seq_start, 'minus'])
-                        fout.write(line + '\n')
-                    else:
-                        line = ' '.join([contig, seq_start + '-' + seq_end, 'plus'])
-                        fout.write(line + '\n')
-        fout.close()
-        #Cut seq of interest out of contig
-        cat = args.input_folder + '/concatenated_assmblies/concatenated_assmblies.fasta'
-        cmd = ['blastdbcmd',
-            '-db', cat,
-            '-entry_batch', current,
-            '-out', query + '_all_nuc_seqs.fasta']
-        call(cmd)
+    args, query = tup 
+    #make oonfig file from blast output
+    current = query + '_config.txt'
+    fout = open(current,'w')
+    with open('blast_out.txt', 'r') as fin:
+        for line in fin:
+            bits = line.strip().split()
+            if float(bits[2]) < (float(args.percent_identity) -1.0):
+                continue
+            if bits[0] == query:
+                contig = bits[1]
+                seq_start = bits[8]
+                seq_end = bits[9]
+                if int(seq_start) > int(seq_end):#minus/plus is right, although seems backward    s..
+                    line = ' '.join([contig, seq_end + '-' + seq_start, 'minus'])
+                    fout.write(line + '\n')
+                else:
+                    line = ' '.join([contig, seq_start + '-' + seq_end, 'plus'])
+                    fout.write(line + '\n')
+    fout.close()
+    #Cut seq of interest out of contig
+    cat = args.input_folder + '/concatenated_assmblies/concatenated_assmblies.fasta'
+    cmd = ['blastdbcmd',
+        '-db', cat,
+        '-entry_batch', current,
+        '-out', query + '_all_nuc_seqs.fasta']
+    call(cmd)
 
 def get_query_seqs(args):
 
@@ -193,6 +189,8 @@ def tree(args, name, aln_suffix, rax = 'raxmlHPC-PTHREADS-AVX2', boots = '100', 
     Remove identical seqs from aln before running raxml
     Add them back to the final tree post raxml
     '''
+    boots - str(boots)
+
     #set model. need to make this accessible one day, not hard coded...
     #Best tree
     if not os.path.exists(name + aln_suffix + '.reduced'):
@@ -241,9 +239,7 @@ def tree(args, name, aln_suffix, rax = 'raxmlHPC-PTHREADS-AVX2', boots = '100', 
                 '-b', '12345',
                 '-#', boots,
                 '-T', args.threads]
-        print ('gg',cmd)
         call(cmd)
-        print('gg done')
         #draw bipartitions on the best ML tree
         cmd = ['nice',
                 rax,
@@ -254,9 +250,7 @@ def tree(args, name, aln_suffix, rax = 'raxmlHPC-PTHREADS-AVX2', boots = '100', 
                 '-z', 'RAxML_bootstrap.' + name + '_b.tre',
                 '-n', name + '_bi.tre',
                 '-T', args.threads]
-        print('gggg')
         call(cmd)
-        print('gggg done')
         d = defaultdict(list)
         if os.path.exists(name + '_dup_info.txt'):
             with open(name + '_dup_info.txt','r')  as fin:
