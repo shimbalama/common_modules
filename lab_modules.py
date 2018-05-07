@@ -182,14 +182,14 @@ def call_blast(args, db, blast_type = 'blastn'):
         cmd += ['-perc_identity', args.percent_identity]
     call(cmd)
 
-def tree(args, name, aln_suffix, rax = 'raxmlHPC-PTHREADS-AVX2', boots = '100', model = 'GTRGAMMA'):
+def tree(args, name, aln_suffix, rax = 'raxmlHPC-PTHREADS-SSE3', boots = '100', model = 'GTRGAMMA'):
 
     '''
     Makes a Raxml bipartitions tree
     Remove identical seqs from aln before running raxml
     Add them back to the final tree post raxml
     '''
-    boots - str(boots)
+    boots = str(boots)
 
     #set model. need to make this accessible one day, not hard coded...
     #Best tree
