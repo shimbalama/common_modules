@@ -182,14 +182,14 @@ def call_blast(args, db, blast_type = 'blastn'):
         cmd += ['-perc_identity', args.percent_identity]
     call(cmd)
 
-def tree(args, name, aln_suffix, rax = 'raxmlHPC-PTHREADS-AVX2', boots = '100', model = 'GTRGAMMA'):
+def tree(args, name, aln_suffix, rax = 'raxmlHPC-PTHREADS-SSE3', boots = '100', model = 'GTRGAMMA'):
 
     '''
     Makes a Raxml bipartitions tree
     Remove identical seqs from aln before running raxml
     Add them back to the final tree post raxml
     '''
-    boots - str(boots)
+    boots = str(boots)
 
     #set model. need to make this accessible one day, not hard coded...
     #Best tree
@@ -215,7 +215,8 @@ def tree(args, name, aln_suffix, rax = 'raxmlHPC-PTHREADS-AVX2', boots = '100', 
     
     use_reduced = False
     if os.path.exists(name + aln_suffix + '.reduced'):
-        shutil.move('RAxML_info.' + name + '.tre', name + '_dup_info.txt')
+        if not os.path.exists(name + '_dup_info.txt'):#keep first one
+            shutil.move('RAxML_info.' + name + '.tre', name + '_dup_info.txt')
         for rax_file in glob('RAxML_*'):
             os.remove(rax_file)
         call(cmd) #use the reduced aln so no dups
@@ -259,8 +260,8 @@ def tree(args, name, aln_suffix, rax = 'raxmlHPC-PTHREADS-AVX2', boots = '100', 
                         in_tree, _, not_int_tree = line.strip().split()[3:6]
                         d[in_tree].append(not_int_tree)
             for tre_file in ['RAxML_bestTree.' + name + '.tre',
-                            'RAxML_bestTree_bipartitionsBranchLabels.' + name + '.tre',
-                            'RAxML_bestTree_bipartitions.' + name + '.tre']:
+                            'RAxML_bipartitionsBranchLabels.' + name + '_bi.tre',
+                            'RAxML_bipartitions.' + name + '_bi.tre']:
                 try:
                     with open(tre_file, 'r') as fin:
                         for line in fin:
@@ -274,15 +275,29 @@ def tree(args, name, aln_suffix, rax = 'raxmlHPC-PTHREADS-AVX2', boots = '100', 
                                     new = ''.join(to_join)+')'
                                     tre = tre.replace(sample, new)
                                     to_join = []
-                    with open(tre_file.replace('.tre', '') + '_all.tre', 'w') as fout:
-                        fout.write(tre)
+                    if tre_file == 'RAxML_bestTree.' + name + '.tre':
+                        with open(name + '_' + tre_file.replace(name + '.tre', 'tre'), 'w') as fout:
+                            fout.write(tre)
+                    else:
+                        with open(name + '_' + tre_file.replace(name + '_bi.tre', 'tre'), 'w') as fout:
+                            fout.write(tre)
                 except:
                     pass
+        else:
+            assert not use_reduced
+            for tre_file in ['RAxML_bestTree.' + name + '.tre',
+                            'RAxML_bipartitionsBranchLabels.' + name + '_bi.tre',
+                            'RAxML_bipartitions.' + name + '_bi.tre']:
+                if tre_file == 'RAxML_bestTree.' + name + '.tre':#copy instaed of move as that the output is same
+                    shutil.copy(tre_file, name + '_' + tre_file.replace(name + '.tre', 'tre'))
+                else:
+                    shutil.copy(tre_file, name + '_' + tre_file.replace(name + '_bi.tre', 'tre'))
         #clean up
         if not os.path.exists('logs'):
             os.makedirs('logs')
         for log in glob('*.RUN.*'):
             shutil.move(log, 'logs/'+log)
+
 
 
 
