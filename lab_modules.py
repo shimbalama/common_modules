@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import sys
 from subprocess import call, Popen, PIPE
 import os
 from collections import defaultdict
@@ -43,27 +44,25 @@ def cat(args):
     Concatenates assemblies; takes n assemblies and makes one file with all contigs
     '''
     print ('cating assemblies...')
-    if os.path.isfile(args.input_folder + '/concatenated_assmblies/concatenated_assmblies.fasta'):
+    if os.path.isfile(args.input_folder + '/concatenated_assemblies/concatenated_assemblies.fasta'):
         make = False
     else:
-        if not os.path.exists(args.input_folder + '/concatenated_assmblies'):
-            os.makedirs(args.input_folder + '/concatenated_assmblies')
+        if not os.path.exists(args.input_folder + '/concatenated_assemblies'):
+            os.makedirs(args.input_folder + '/concatenated_assemblies')
         make = True
-        fout = open(args.input_folder + '/concatenated_assmblies/concatenated_assmblies.fasta', 'w')
+        fout = open(args.input_folder + '/concatenated_assemblies/concatenated_assemblies.fasta', 'w')
     assemblies = set([])
-    #test if allready cated
-    assemblies_names = glob(args.input_folder + '/*')
     if make:
         for assembly in glob(args.input_folder + '/*'):
             ass_file_name = assembly.strip().split('/')[-1].split('.')
-            if ass_file_name == ['concatenated_assmblies']:
+            if ass_file_name == ['concatenated_assemblies']:
                 continue
             try:
                 assert len(ass_file_name) == 2
             except:
-                print ('len(ass_file_name) ==', len(ass_file_name), ass_file_name)
+                print ('Please ensure that your database file name only has one fullstop i.e., sample_1.fa NOT sample.1.fa')
                 sys.exit(0)
-            ass_file_name = ass_file_name[0]
+            ass_file_name = ass_file_name[0].replace('#','_')#Hashes break stuff
             assemblies.add(ass_file_name)
             for i, record in enumerate(SeqIO.parse(assembly, 'fasta')):
                 record.id = ass_file_name + '_' + str(i)#can't handle all the variablity any other way
@@ -72,8 +71,8 @@ def cat(args):
         fout.close()
     #If pre cated
     print ('Getting assembly names...')
-    for record in SeqIO.parse(args.input_folder + '/concatenated_assmblies/concatenated_assmblies.fasta', 'fasta'):
-        ass = '_'.join(record.id.split('_')[:-1])
+    for record in SeqIO.parse(args.input_folder + '/concatenated_assemblies/concatenated_assemblies.fasta', 'fasta'):
+        ass = '_'.join(record.id.split('_')[:-1])#just takes contig number off the end
         if make:
             assert ass in assemblies
         assemblies.add(ass)
@@ -107,7 +106,7 @@ def fasta(tup):
                     fout.write(line + '\n')
     fout.close()
     #Cut seq of interest out of contig
-    cat = args.input_folder + '/concatenated_assmblies/concatenated_assmblies.fasta'
+    cat = args.input_folder + '/concatenated_assemblies/concatenated_assemblies.fasta'
     cmd = ['blastdbcmd',
         '-db', cat,
         '-entry_batch', current,
@@ -132,7 +131,7 @@ def blast(args):
     seq_type_query = get_seq_type(args.query)
     print ('fine -> ', seq_type_query)
     print ('testing db seqs')
-    cat = args.input_folder + '/concatenated_assmblies/concatenated_assmblies.fasta'
+    cat = args.input_folder + '/concatenated_assemblies/concatenated_assemblies.fasta'
     seq_type_db = get_seq_type(cat)
     print ('fine -> ', seq_type_db)
     #db
