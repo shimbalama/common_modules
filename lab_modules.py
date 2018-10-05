@@ -11,6 +11,15 @@ import shutil
 def main():
     pass
 
+def call_iqtree_with_SNP_aln(args, d_count):
+
+    constants=','.join([str(d_count.get('A')), str(d_count.get('C')),
+           str(d_count.get('G')), str(d_count.get('T'))])
+    print ('constants',constants)
+    call(['nice', 'iqtree', '-s', args.out + '_trimmed_SNP.aln',
+          '-m', 'GTR+G', '-bb', '1000', '-czb', '-fconst', constants])
+
+
 def get_seq_type(seqs):
 
     #better with regex?
@@ -81,7 +90,8 @@ def cat(args):
     return assemblies
 
 def fasta(tup):
-
+    
+    print ('fasta...')
     '''
     Makes a fasta file of all hits for each query
     '''
