@@ -11,6 +11,15 @@ import shutil
 def main():
     pass
 
+def call_iqtree_with_SNP_aln(args, d_count):
+
+    constants=','.join([str(d_count.get('A')), str(d_count.get('C')),
+           str(d_count.get('G')), str(d_count.get('T'))])
+    print ('constants',constants)
+    call(['nice', 'iqtree', '-s', args.out + '_trimmed_SNP.aln',
+          '-m', 'GTR+G', '-bb', '1000', '-czb', '-fconst', constants])
+
+
 def get_seq_type(seqs):
 
     #better with regex?
@@ -81,7 +90,8 @@ def cat(args):
     return assemblies
 
 def fasta(tup):
-
+    
+    print ('fasta...')
     '''
     Makes a fasta file of all hits for each query
     '''
@@ -89,6 +99,7 @@ def fasta(tup):
     #make oonfig file from blast output
     current = query + '_config.txt'
     fout = open(current,'w')
+    coords = []
     with open('blast_out.txt', 'r') as fin:
         for line in fin:
             bits = line.strip().split()
@@ -98,7 +109,8 @@ def fasta(tup):
                 contig = bits[1]
                 seq_start = bits[8]
                 seq_end = bits[9]
-                if int(seq_start) > int(seq_end):#minus/plus is right, although seems backward    s..
+                coords.append(seq_start + '-' + seq_end) #only want in one direction as just an id 
+                if int(seq_start) > int(seq_end):#minus/plus is right, although seems backwards..
                     line = ' '.join([contig, seq_end + '-' + seq_start, 'minus'])
                     fout.write(line + '\n')
                 else:
@@ -110,8 +122,15 @@ def fasta(tup):
     cmd = ['blastdbcmd',
         '-db', cat,
         '-entry_batch', current,
-        '-out', query + '_all_nuc_seqs.fasta']
+        '-out', query + '_all_nuc_seqs_tmp.fasta']
     call(cmd)
+    
+    #add coords to fasta as unique id for multiple hits in same contig
+    with open(query + '_all_nuc_seqs.fasta','w') as fout:
+        for i, record in enumerate(SeqIO.parse(query + '_all_nuc_seqs_tmp.fasta','fasta')):
+            record.description = coords[i]  
+            SeqIO.write(record,fout,'fasta')          
+
 
 def get_query_seqs(args):
 
