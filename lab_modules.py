@@ -91,7 +91,6 @@ def cat(args):
 
 def fasta(tup):
     
-    print ('fasta...')
     '''
     Makes a fasta file of all hits for each query
     '''
