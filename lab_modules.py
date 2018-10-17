@@ -74,7 +74,7 @@ def cat(args):
             ass_file_name = ass_file_name[0].replace('#','_')#Hashes break stuff
             assemblies.add(ass_file_name)
             for i, record in enumerate(SeqIO.parse(assembly, 'fasta')):
-                record.id = ass_file_name + '_' + str(i)#can't handle all the variablity any other way
+                record.id = 'gnl|MYDB|' + ass_file_name + '_' + str(i)#can't handle all the variablity any other way
                 SeqIO.write(record,fout,'fasta')
     if make:
         fout.close()
@@ -83,7 +83,7 @@ def cat(args):
     for record in SeqIO.parse(args.input_folder + '/concatenated_assemblies/concatenated_assemblies.fasta', 'fasta'):
         ass = '_'.join(record.id.split('_')[:-1])#just takes contig number off the end
         if make:
-            assert ass in assemblies
+            assert ass.replace('gnl|MYDB|','') in assemblies
         assemblies.add(ass)
     print (len(assemblies), 'assemblies used')
 
@@ -161,7 +161,7 @@ def blast(args):
         call(['makeblastdb',
         '-in', cat,
         '-parse_seqids',
-        '-dbtype', seq_type])
+        '-dbtype', seq_type])#'-parse_seqids',
     except:
         print ('you need to install makeblastdb or fix paths to it')
 
