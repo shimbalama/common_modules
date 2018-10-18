@@ -74,17 +74,18 @@ def cat(args):
             ass_file_name = ass_file_name[0].replace('#','_')#Hashes break stuff
             assemblies.add(ass_file_name)
             for i, record in enumerate(SeqIO.parse(assembly, 'fasta')):
-                record.id = 'gnl|MYDB|' + ass_file_name + '_' + str(i)#can't handle all the variablity any other way
+                record.id = 'gnl|MYDB|'+ass_file_name + '_' + str(i)#can't handle all the variablity any other way
                 SeqIO.write(record,fout,'fasta')
     if make:
         fout.close()
     #If pre cated
     print ('Getting assembly names...')
     for record in SeqIO.parse(args.input_folder + '/concatenated_assemblies/concatenated_assemblies.fasta', 'fasta'):
-        ass = '_'.join(record.id.split('_')[:-1])#just takes contig number off the end
+        ass = '_'.join(record.id.split('_')[:-1]).replace('gnl|MYDB|','')#just takes contig number off the end
         if make:
-            assert ass.replace('gnl|MYDB|','') in assemblies
-        assemblies.add(ass)
+            assert ass in assemblies
+        else:
+            assemblies.add(ass)
     print (len(assemblies), 'assemblies used')
 
     return assemblies
@@ -127,7 +128,8 @@ def fasta(tup):
     #add coords to fasta as unique id for multiple hits in same contig
     with open(query + '_all_nuc_seqs.fasta','w') as fout:
         for i, record in enumerate(SeqIO.parse(query + '_all_nuc_seqs_tmp.fasta','fasta')):
-            record.description = coords[i]  
+            record.description = coords[i]
+            record.id = str(record.id).split(':')[1]
             SeqIO.write(record,fout,'fasta')          
 
 
