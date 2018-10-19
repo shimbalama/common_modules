@@ -74,24 +74,24 @@ def cat(args):
             ass_file_name = ass_file_name[0].replace('#','_')#Hashes break stuff
             assemblies.add(ass_file_name)
             for i, record in enumerate(SeqIO.parse(assembly, 'fasta')):
-                record.id = ass_file_name + '_' + str(i)#can't handle all the variablity any other way
+                record.id = 'gnl|MYDB|'+ass_file_name + '_' + str(i)#can't handle all the variablity any other way
                 SeqIO.write(record,fout,'fasta')
     if make:
         fout.close()
     #If pre cated
     print ('Getting assembly names...')
     for record in SeqIO.parse(args.input_folder + '/concatenated_assemblies/concatenated_assemblies.fasta', 'fasta'):
-        ass = '_'.join(record.id.split('_')[:-1])#just takes contig number off the end
+        ass = '_'.join(record.id.split('_')[:-1]).replace('gnl|MYDB|','')#just takes contig number off the end
         if make:
             assert ass in assemblies
-        assemblies.add(ass)
+        else:
+            assemblies.add(ass)
     print (len(assemblies), 'assemblies used')
 
     return assemblies
 
 def fasta(tup):
     
-    print ('fasta...')
     '''
     Makes a fasta file of all hits for each query
     '''
@@ -128,9 +128,22 @@ def fasta(tup):
     #add coords to fasta as unique id for multiple hits in same contig
     with open(query + '_all_nuc_seqs.fasta','w') as fout:
         for i, record in enumerate(SeqIO.parse(query + '_all_nuc_seqs_tmp.fasta','fasta')):
-            record.description = coords[i]  
-            SeqIO.write(record,fout,'fasta')          
-
+            record.description = coords[i]
+            record.id = str(record.id).split(':')[1]
+            seq = str(record.seq)
+            seq_len = len(seq)
+            if seq_len%3==0:
+                SeqIO.write(record,fout,'fasta')          
+            else:
+                while seq_len%3!=0:
+                    seq_len -= 1
+                seq = seq[:seq_len]
+                try:assert len(seq)%3==0
+                except: print (len(seq), len(seq)%3)
+                fout.write('>'+record.id + ' ' + record.description +'\n')
+                for i in range(0, seq_len, 60):
+                    fout.write(seq[i:i+60] +'\n')            
+    
 
 def get_query_seqs(args):
 
@@ -162,7 +175,7 @@ def blast(args):
         call(['makeblastdb',
         '-in', cat,
         '-parse_seqids',
-        '-dbtype', seq_type])
+        '-dbtype', seq_type])#'-parse_seqids',
     except:
         print ('you need to install makeblastdb or fix paths to it')
 
