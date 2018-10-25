@@ -80,12 +80,14 @@ def cat(args):
         fout.close()
     #If pre cated
     print ('Getting assembly names...')
-    for record in SeqIO.parse(args.input_folder + '/concatenated_assemblies/concatenated_assemblies.fasta', 'fasta'):
-        ass = '_'.join(record.id.split('_')[:-1]).replace('gnl|MYDB|','')#just takes contig number off the end
-        if make:
-            assert ass in assemblies
-        else:
-            assemblies.add(ass)
+    with open('assembly_names.txt','w') as fout:
+        for record in SeqIO.parse(args.input_folder + '/concatenated_assemblies/concatenated_assemblies.fasta', 'fasta'):
+            ass = '_'.join(record.id.split('_')[:-1]).replace('gnl|MYDB|','')#just takes contig number off the end
+            if make:
+                assert ass in assemblies
+            else:
+                assemblies.add(ass)
+            fout.write(ass+'\n')
     print (len(assemblies), 'assemblies used')
 
     return assemblies
@@ -124,14 +126,15 @@ def fasta(tup):
         '-entry_batch', current,
         '-out', query + '_all_nuc_seqs_tmp.fasta']
     call(cmd)
-    
     #add coords to fasta as unique id for multiple hits in same contig
     with open(query + '_all_nuc_seqs.fasta','w') as fout:
         for i, record in enumerate(SeqIO.parse(query + '_all_nuc_seqs_tmp.fasta','fasta')):
             record.description = coords[i]
             record.id = str(record.id).split(':')[1]
-            seq = str(record.seq)
-            seq_len = len(seq)
+            #seq = str(record.seq)
+            #seq_len = len(seq)
+            SeqIO.write(record,fout,'fasta')
+            '''
             if seq_len%3==0:
                 SeqIO.write(record,fout,'fasta')          
             else:
@@ -143,7 +146,7 @@ def fasta(tup):
                 fout.write('>'+record.id + ' ' + record.description +'\n')
                 for i in range(0, seq_len, 60):
                     fout.write(seq[i:i+60] +'\n')            
-    
+            '''
 
 def get_query_seqs(args):
 
@@ -172,10 +175,12 @@ def blast(args):
     else:
         seq_type = 'prot'
     try:
+        print ('makeblastdb')
         call(['makeblastdb',
         '-in', cat,
         '-parse_seqids',
         '-dbtype', seq_type])#'-parse_seqids',
+        print ('makeblastdb done')
     except:
         print ('you need to install makeblastdb or fix paths to it')
 
